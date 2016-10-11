@@ -4,7 +4,8 @@
 #include<CountUpDownTimer.h>
 
 LiquidCrystal_I2C lcd(0x3f, 16, 2);
-CountUpDownTimer T(DOWN);
+
+CountUpDownTimer T(DOWN); // time count down
 
 #define swSetting 3
 #define swActive 4
@@ -20,10 +21,12 @@ byte modeLoop = 0;
 
 boolean ignoreUpS = false;
 boolean ignoreUpA = false;
+boolean fact = false;
+boolean count = false;
 
-int addressMill = 8;// define address millis eeprom is 8
+int addressMill = 8;// define address Millis eeprom is 8
 int addressSec = 9; // define address Seccond eeprom is 9
-int sec, mill;
+int sec, mill, millCount;
 
 int buttonLastS = 0;
 int buttonLastA = 0;
@@ -105,7 +108,7 @@ void settime()  {
       lcd.setCursor(0, 0);
       lcd.print("SET Time Finish ");
       modeLoop = 0;
-      delay(3000);
+      delay(2000);
     }
   }
 
@@ -132,43 +135,95 @@ void settime()  {
 }
 
 void active() {
+  if (sec > 0)  {
+    T.SetTimer(0, 0, sec);
+    T.StartTimer();
+    count = true;
+  }
+  if (sec == 0 && millCount > 0) {
+    millCount--;
+    lcd.setCursor(0, 0);
+    lcd.print(" Coffee grinder ");
+    lcd.setCursor(0, 1);
+    lcd.print("Count down ");
+    if (sec < 10)
+      lcd.print("0");
+    lcd.print(sec);
+    lcd.print(".");
+    lcd.print(millCount);
+    lcd.print("S  ");
+  }
+  if (sec == 0 && millCount <= 0)  {
+    Serial.println("END millCount");
+    lcd.clear();
+    lcd.setCursor(0, 0);
+    lcd.print(" Coffee grinder ");
+    lcd.setCursor(0, 1);
+    lcd.print("     Finish     ");
+    delay(2000);
+    count = false;
+    modeLoop = 0;
+  }
 
-  Act_state = digitalRead(swActive);
+  while (count == true) {
+    Set_State = digitalRead(swSetting);
+    if (Set_State == 0)  {
+      delay(200);
+      count = false;
+      modeLoop = 0;
+    }
 
-  T.Timer();
-  //  Serial.print("Time count down = ");
-  //  Serial.print(T.ShowMinutes());
-  //  Serial.print(" : ");
-  //  if (T.ShowSeconds() <= 9) {
-  //    Serial.print("0");
-  //  }
-  //  Serial.print(T.ShowSeconds());
-  //  Serial.print(" . ");
-  //
-  //  mill = ((millis() / 100) * (-1)) % 10;
-  //  if (T.ShowSeconds() <= 0)
-  //    mill = 0;
-  //  Serial.print(mill);
-  //  Serial.println(" S ");
-  //
-  //  if (T.ShowSeconds() <= 0 && mill <= 0)  {
-  //    Serial.println(" END ");
-  //    delay(2000);
-  //    //    while (1);
-  //  }
+    Act_state = digitalRead(swActive);
+    if (Act_state == 0)  {
+      delay(200);
+      fact = true;
+    }
 
-  if (T.TimeHasChanged() ) {
-    Serial.print(T.ShowHours());
-    Serial.print(":");
-    Serial.print(T.ShowMinutes());
-    Serial.print(":");
-    Serial.print(T.ShowSeconds());
-    Serial.print(":");
-    Serial.print(T.ShowMilliSeconds());
-    Serial.print(":");
-    Serial.print(T.ShowMicroSeconds());
-    Serial.print(":");
-    Serial.println(T.ShowTotalSeconds());
+    while (fact == true)  {
+      Serial.println("WHILE ---");
+      lcd.setCursor(0, 1);
+      lcd.print("    Pause ");
+      Act_state = digitalRead(swActive);
+      if (Act_state == 0)  {
+        delay(200);
+        fact = false;
+      }
+      Set_State = digitalRead(swSetting);
+      if (Set_State == 0)  {
+        delay(200);
+        modeLoop = 0;
+        fact = false;
+      }
+    }
+    
+    T.Timer(); // run the timer
+    lcd.setCursor(0, 0);
+    lcd.print(" Coffee grinder ");
+    lcd.setCursor(0, 1);
+    lcd.print("Count down ");
+    if (T.ShowSeconds() < 10)
+      lcd.print("0");
+    lcd.print(T.ShowSeconds());
+    lcd.print(".");
+    if (T.ShowSeconds() > 0 )  {
+      lcd.print((T.ShowMilliSeconds() / 100) * (-1) % 10);
+    }
+    if (T.ShowSeconds() <= 0)  {
+      lcd.print(millCount--);
+    }
+    lcd.print("S  ");
+
+    if (T.ShowSeconds() <= 0 && millCount <= 0)  {
+      Serial.println("END Seconds");
+      lcd.clear();
+      lcd.setCursor(0, 0);
+      lcd.print(" Coffee grinder ");
+      lcd.setCursor(0, 1);
+      lcd.print("     Finish     ");
+      delay(2000);
+      count = false;
+      modeLoop = 0;
+    }
   }
 }
 
@@ -183,8 +238,8 @@ void setup() {
   lcd.begin();
   lcd.backlight();
 
-  T.SetTimer(0, 1, 0);
-  T.StartTimer();
+  //  T.SetTimer(0, 1, 0);
+  //  T.StartTimer();
 
   mill = EEPROM.read(addressMill);
   sec = EEPROM.read(addressSec);
@@ -195,10 +250,7 @@ void setup() {
 void loop() {
 
   /***   Main Code   ***/
-  Act_state = digitalRead(swActive);
-  //  if(Act_state == 0)  {
-  //    active();
-  //  }
+
 
   //  micros()
 
@@ -218,9 +270,20 @@ void loop() {
   }
   buttonLastS = Set_State;
 
-  //  if (modeLoop >= 3) {
-  //    modeLoop = 0;
-  //  }
+  Act_state = digitalRead(swActive);
+  if (Act_state == 0)  {
+    delay(200);
+    lcd.clear();
+    millCount = mill;
+    modeLoop = 2;
+  }
+
+  while (modeLoop == 1) {
+    settime();
+  }
+  while (modeLoop == 2) {
+    active();
+  }
 
   Serial.println("Main Loop");
   lcd.setCursor(0, 0);
@@ -234,13 +297,6 @@ void loop() {
   lcd.print(".");
   lcd.print(mill);
   lcd.print("S  ");
-  
-  while (modeLoop == 1) {
-    settime();
-  }
-  while (modeLoop == 2) {
-    active();
-  }
 }
 
 
