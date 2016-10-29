@@ -23,6 +23,7 @@ boolean ignoreUpS = false;
 boolean ignoreUpA = false;
 boolean fact = false;
 boolean count = false;
+boolean count_mill = false;
 
 int addressMill = 8;// define address Millis eeprom is 8
 int addressSec = 9; // define address Seccond eeprom is 9
@@ -135,33 +136,33 @@ void settime()  {
 }
 
 void active() {
-  if (sec > 0)  {
+  if (sec > 1 && millCount >= 0)  {
     T.SetTimer(0, 0, sec);
-    T.StartTimer();
     count = true;
-  }
-  if (sec == 0 && millCount > 0) {
-    millCount--;
+    lcd.home();
+  } else if (sec <= 1 && millCount >= 0) {
+    count_mill = true;
     lcd.setCursor(0, 0);
     lcd.print(" Coffee grinder ");
-    lcd.setCursor(0, 1);
-    lcd.print("Count down ");
-    if (sec < 10)
-      lcd.print("0");
-    lcd.print(sec);
+    lcd.setCursor(0, 1); 
+    lcd.print("Count dow ");
+    lcd.print("00");
     lcd.print(".");
-    lcd.print(millCount);
+    lcd.print(millCount--);
     lcd.print("S  ");
   }
-  if (sec == 0 && millCount <= 0)  {
+
+  if (sec <= 1 && millCount <= 0 && count_mill == true )  {
     Serial.println("END millCount");
     lcd.clear();
     lcd.setCursor(0, 0);
     lcd.print(" Coffee grinder ");
     lcd.setCursor(0, 1);
-    lcd.print("     Finish     ");
+    lcd.print("     Finish1     ");
     delay(2000);
     count = false;
+    count_mill == false;
+    millCount = mill;
     modeLoop = 0;
   }
 
@@ -180,7 +181,6 @@ void active() {
     }
 
     while (fact == true)  {
-      Serial.println("WHILE ---");
       lcd.setCursor(0, 1);
       lcd.print("    Pause ");
       Act_state = digitalRead(swActive);
@@ -192,10 +192,11 @@ void active() {
       if (Set_State == 0)  {
         delay(200);
         modeLoop = 0;
+        count = false;
         fact = false;
       }
     }
-    
+    T.StartTimer();
     T.Timer(); // run the timer
     lcd.setCursor(0, 0);
     lcd.print(" Coffee grinder ");
@@ -205,12 +206,22 @@ void active() {
       lcd.print("0");
     lcd.print(T.ShowSeconds());
     lcd.print(".");
-    if (T.ShowSeconds() > 0 )  {
-      lcd.print((T.ShowMilliSeconds() / 100) * (-1) % 10);
+    if (T.ShowSeconds() > 0 && millCount <= 0)  {
+      millCount = 10;
     }
-    if (T.ShowSeconds() <= 0)  {
-      lcd.print(millCount--);
-    }
+    lcd.print(millCount--);
+    //    if (T.ShowSeconds() != 0 && millCount <= 0)  {
+    //      millCount = 10;
+    //    } else if (T.ShowSeconds() == 0 && millCount <= 0)  {
+    //      millCount = 0;
+    //    }
+    //    if (T.ShowSeconds() > 0 )  {
+    //      lcd.print((T.ShowMilliSeconds() / 100) * (-1) % 10);
+    //    }
+    //    if (T.ShowSeconds() <= 0)  {
+    //      lcd.print(millCount--);
+    //    }
+
     lcd.print("S  ");
 
     if (T.ShowSeconds() <= 0 && millCount <= 0)  {
@@ -275,6 +286,7 @@ void loop() {
     delay(200);
     lcd.clear();
     millCount = mill;
+    if (sec == 1) millCount = 9;
     modeLoop = 2;
   }
 
