@@ -14,6 +14,7 @@ CountUpDownTimer T(DOWN); // time count down
 #define holdTimeS 1000
 #define debounceA 50
 #define holdTimeA 1000
+#define RELAY 12
 
 byte Act_state = 0;
 byte Set_State = 0;
@@ -107,19 +108,23 @@ void settime()  {
       EEPROM.write(addressMill, mill);
       lcd.clear();
       lcd.setCursor(0, 0);
-      lcd.print("SET Time Finish ");
+      lcd.print(" SET Time Finish ");
+      lcd.setCursor(0, 1);
+      lcd.print("   ");
+      if (sec < 10) lcd.print("0");
+      lcd.print(sec);
+      lcd.print(".");
+      lcd.print(mill);
+      lcd.print("0 Sec.   ");
       modeLoop = 0;
       delay(2000);
+      lcd.clear();
     }
   }
 
   lcd.setCursor(0, 0);
-  lcd.print(" Coffee grinder ");
-  lcd.setCursor(0, 1);
-  lcd.print("SET Time : ");
-  if (sec < 10)  {
-    lcd.print("0");
-  }
+  lcd.print("   ");
+  if (sec < 10)  lcd.print("0");
   if (sec <= 0) {
     lcd.print("0");
   } else {
@@ -131,19 +136,14 @@ void settime()  {
   } else {
     lcd.print(mill);
   }
-  lcd.print("S  ");
-
-  //  Serial.print("SET Time = ");
-  //  if (sec < 10)  {
-  //    Serial.print("0");
-  //  }
-  //  Serial.print(sec);
-  //  Serial.print(".");
-  //  Serial.print(mill);
-  //  Serial.println(" S");
+  lcd.print("0");
+  lcd.print(" Sec.   ");
+  lcd.setCursor(0, 1);
+  lcd.print(" v=- ^=+ v^=Set ");
 }
 
 void active() {
+  digitalWrite(RELAY, HIGH);
   if (sec > 1 && millCount >= 0)  {
     T.SetTimer(0, 0, sec);
     count = true;
@@ -151,22 +151,23 @@ void active() {
   } else if (sec <= 1 && millCount >= 0) {
     count_mill = true;
     lcd.setCursor(0, 0);
-    lcd.print(" Coffee grinder ");
-    lcd.setCursor(0, 1);
-    lcd.print("Count dow ");
-    lcd.print("00");
-    lcd.print(".");
+    lcd.print("   00.");
     lcd.print(millCount--);
-    lcd.print("S  ");
+    lcd.print(millCount--);
+    lcd.print(" Sec.   ");
+    lcd.setCursor(0, 1);
+    lcd.print("v=Pause  ^=Reset");
   }
 
   if (sec <= 1 && millCount <= 0 && count_mill == true )  {
     lcd.clear();
     lcd.setCursor(0, 0);
-    lcd.print(" Coffee grinder ");
+    lcd.print("   00.00 Sec.   ");
     lcd.setCursor(0, 1);
-    lcd.print("     Finish     ");
-    delay(2000);
+    lcd.print("    Finish      ");
+    digitalWrite(RELAY, LOW);
+    delay(1000);
+    lcd.clear();
     count = false;
     count_mill == false;
     millCount = mill;
@@ -188,11 +189,13 @@ void active() {
     }
 
     while (fact == true)  {
+      digitalWrite(RELAY, LOW);
       lcd.setCursor(0, 1);
-      lcd.print("    Pause ");
+      lcd.print("     Pause      ");
       Act_state = digitalRead(swActive);
       if (Act_state == 0)  {
         delay(200);
+        digitalWrite(RELAY, HIGH);
         fact = false;
       }
       Set_State = digitalRead(swSetting);
@@ -205,39 +208,32 @@ void active() {
     }
     T.StartTimer();
     T.Timer(); // run the timer
+
     lcd.setCursor(0, 0);
-    lcd.print(" Coffee grinder ");
-    lcd.setCursor(0, 1);
-    lcd.print("Count down ");
+    lcd.print("   ");
     if (T.ShowSeconds() < 10)
       lcd.print("0");
     lcd.print(T.ShowSeconds());
     lcd.print(".");
     if (T.ShowSeconds() > 0 && millCount <= 0)  {
-      millCount = 10;
+      millCount = 9;
     }
     lcd.print(millCount--);
-    //    if (T.ShowSeconds() != 0 && millCount <= 0)  {
-    //      millCount = 10;
-    //    } else if (T.ShowSeconds() == 0 && millCount <= 0)  {
-    //      millCount = 0;
-    //    }
-    //    if (T.ShowSeconds() > 0 )  {
-    //      lcd.print((T.ShowMilliSeconds() / 100) * (-1) % 10);
-    //    }
-    //    if (T.ShowSeconds() <= 0)  {
-    //      lcd.print(millCount--);
-    //    }
+    lcd.print(millCount--);
+    lcd.print(" Sec.   ");
 
-    lcd.print("S  ");
+    lcd.setCursor(0, 1);
+    lcd.print("v=Pause  ^=Reset");
 
     if (T.ShowSeconds() <= 0 && millCount <= 0)  {
       lcd.clear();
       lcd.setCursor(0, 0);
-      lcd.print(" Coffee grinder ");
+      lcd.print("   00.00 Sec.   ");
       lcd.setCursor(0, 1);
       lcd.print("     Finish     ");
-      delay(2000);
+      digitalWrite(RELAY, LOW);
+      delay(1000);
+      lcd.clear();
       count = false;
       modeLoop = 0;
     }
@@ -251,6 +247,7 @@ void setup() {
 
   pinMode(swActive, INPUT_PULLUP);
   pinMode(swSetting, INPUT_PULLUP);
+  pinMode(RELAY, OUTPUT);
 
   lcd.begin();
   lcd.backlight();
@@ -262,12 +259,9 @@ void setup() {
 }
 
 void loop() {
-
+  digitalWrite(RELAY, LOW);
+  
   /***   Main Code   ***/
-
-
-  //  micros()
-
   Set_State = digitalRead(swSetting);
   if (Set_State == LOW && buttonLastS == HIGH && (millis() - btnUpTimeS) > long(debounceS)) {
     btnDnTimeS = millis();
@@ -286,7 +280,7 @@ void loop() {
 
   Act_state = digitalRead(swActive);
   if (Act_state == 0)  {
-    delay(200);
+    delay(1000);
     lcd.clear();
     millCount = mill;
     if (sec == 1) millCount = 9;
@@ -301,16 +295,16 @@ void loop() {
   }
 
   lcd.setCursor(0, 0);
-  lcd.print(" Coffee grinder ");
-  lcd.setCursor(0, 1);
-  lcd.print("Count down ");
-  if (sec < 10)  {
-    lcd.print("0");
-  }
+  lcd.print("   ");
+  if (sec < 10)  lcd.print("0");
   lcd.print(sec);
   lcd.print(".");
   lcd.print(mill);
-  lcd.print("S  ");
+  if (mill < 10) lcd.print("0");
+  lcd.print(" Sec.   ");
+  lcd.setCursor(0, 1);
+  lcd.print(" v=Start  ^=Set ");
+
 }
 
 
