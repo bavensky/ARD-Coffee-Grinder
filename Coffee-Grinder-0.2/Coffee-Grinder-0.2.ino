@@ -1,8 +1,8 @@
 /*
- * Arduino Time Counter for Coffee grinder
- * Hardware : Arduino UNO, LCD, SolidState Relay, 2 Button
- * Author : Bavensky :3
- */
+   Arduino Time Counter for Coffee grinder
+   Hardware : Arduino UNO, LCD, SolidState Relay, 2 Button
+   Author : Bavensky :3
+*/
 
 #include <EEPROM.h>
 #include <Wire.h>
@@ -31,6 +31,7 @@ boolean ignoreUpA = false;
 boolean fact = false;
 boolean count = false;
 boolean count_mill = false;
+boolean updatePush = false;
 
 int addressMill = 8;// define address Millis eeprom is 8
 int addressSec = 9; // define address Seccond eeprom is 9
@@ -196,13 +197,22 @@ void active() {
     while (fact == true)  {
       digitalWrite(RELAY, LOW);
       lcd.setCursor(0, 1);
-      lcd.print("     Pause      ");
-      Act_state = digitalRead(swActive);
-      if (Act_state == 0)  {
-        delay(200);
-        digitalWrite(RELAY, HIGH);
-        fact = false;
+      lcd.print("      Pause     ");
+
+      if (digitalRead(swActive) == 1)  {
+        updatePush = true;
       }
+
+      if (updatePush == true)  {
+        if (digitalRead(swActive) == 0)  {
+          delay(200);
+          digitalWrite(RELAY, HIGH);
+          fact = false;
+          updatePush = false;
+          delay(500);
+        }
+      }
+
       Set_State = digitalRead(swSetting);
       if (Set_State == 0)  {
         delay(200);
@@ -257,8 +267,8 @@ void setup() {
   lcd.begin();
   lcd.backlight();
 
-//  mill = 0;
-//  sec = 0;
+  //  mill = 0;
+  //  sec = 0;
   mill = EEPROM.read(addressMill);
   sec = EEPROM.read(addressSec);
 
