@@ -17,9 +17,9 @@ CountUpDownTimer T(DOWN); // time count down
 #define swActive 4
 
 #define debounceS 200
-#define holdTimeS 300
+#define holdTimeS 500
 #define debounceA 200
-#define holdTimeA 300
+#define holdTimeA 500
 #define RELAY 12
 
 byte Act_state = 0;
